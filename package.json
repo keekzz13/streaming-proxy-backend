@@ -9,7 +9,6 @@
   "dependencies": {
     "express": "^4.19.2",
     "cheerio": "^1.0.0",
-    "axios": "^1.7.2",
-    "cloudscraper": "^4.6.0"
+    "axios": "^1.7.2"
   }
 }
