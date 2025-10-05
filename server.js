@@ -48,7 +48,7 @@ app.get('/proxy', async (req, res) => {
       'Sec-CH-UA-Platform': '"Windows"',
       'CF-Connecting-IP': '192.0.2.1',
       'X-Forwarded-For': '192.0.2.1',
-      'Cookie': cookies
+      'Cookie': 'PHPSESSID=27lfeaec1gfnv0b2gqn3vneh0v; SITE_TOTAL_ID=aOJ223HXtoblQvR2_l09VAAAAAE; __cf_bm=<new_value>'
     };
 
     const response = await axios.get(targetUrl, {
