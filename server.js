@@ -1,14 +1,14 @@
 const express = require('express');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer-core');
-const { install, resolveBuildId } = require('@puppeteer/browsers');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 const adDomains = [
   'googleadservices.com', 'doubleclick.net', 'adservice.google',
-  'popads.net', 'propellerads.com', 'adnxs.com', 'pubmatic.com'
+  'popads.net', 'propellerads.com', 'adnxs.com', 'pubmatic.com',
+  'adskeeper.com', 'vliplatform.com'
 ];
 
 app.use((req, res, next) => {
@@ -24,18 +24,10 @@ app.get('/proxy', async (req, res) => {
   }
 
   try {
-    const cacheDir = '/opt/render/.cache/puppeteer';
-    const buildId = await resolveBuildId('chrome', 'linux', '131.0.6778.204');
-    const { executablePath } = await install({
-      browser: 'chrome',
-      buildId,
-      cacheDir
-    });
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
-      executablePath
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     });
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
@@ -52,6 +44,22 @@ app.get('/proxy', async (req, res) => {
       'Sec-Fetch-User': '?1'
     });
 
+    await page.setCookie(
+      {
+        name: 'PHPSESSID',
+        value: '27lfeaec1gfnv0b2gqn3vneh0v',
+        domain: '.2embed.skin',
+        path: '/'
+      },
+      {
+        name: 'SITE_TOTAL_ID',
+        value: 'aOJ223HXtoblQvR2_l09VAAAAAE',
+        domain: '.2embed.skin',
+        path: '/',
+        expires: Math.floor(Date.now() / 1000) + 31536000
+      }
+    );
+
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     const content = await page.content();
     await browser.close();
@@ -66,7 +74,7 @@ app.get('/proxy', async (req, res) => {
       }
     });
 
-    $('div[class*="ad"], div[id*="ad"], iframe[src*="ad"], .advertisement, .popup-ad').remove();
+    $('div[class*="ad"], div[id*="ad"], iframe[src*="ad"], .advertisement, .popup-ad, .adsbyvli, .ad-container').remove();
 
     $('script').each((i, el) => {
       const scriptText = $(el).html();
