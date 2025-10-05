@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const cloudscraper = require('cloudscraper');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -23,21 +24,24 @@ app.get('/proxy', async (req, res) => {
   }
 
   try {
-    const response = await axios.get(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': targetUrl.includes('2embed') ? 'https://www.2embed.cc/' : targetUrl.includes('vidsrc.to') ? 'https://vidsrc.to/' : 'https://vidsrc.me/',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      },
-      timeout: 10000
-    });
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Referer': targetUrl.includes('2embed') ? 'https://www.2embed.cc/' : targetUrl.includes('vidsrc.to') ? 'https://vidsrc.to/' : 'https://vidsrc.me/',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-User': '?1'
+    };
 
-    if (response.headers['content-type']?.includes('text/html')) {
-      const $ = cheerio.load(response.data);
+    const response = await cloudscraper.get(targetUrl, { headers, timeout: 10000 });
+
+    if (typeof response === 'string' && response.includes('text/html')) {
+      const $ = cheerio.load(response);
 
       $('script[src]').each((i, el) => {
         const src = $(el).attr('src');
@@ -69,12 +73,12 @@ app.get('/proxy', async (req, res) => {
       res.set('Content-Type', 'text/html');
       res.send($.html());
     } else {
-      res.set(response.headers);
-      res.send(response.data);
+      res.set(response.headers || {});
+      res.send(response);
     }
   } catch (error) {
-    console.error(`Proxy error for ${targetUrl}:`, error.message, error.response?.status);
-    res.status(500).json({ error: 'Proxy failed', details: error.message });
+    console.error(`Proxy error for ${targetUrl}:`, error.message, error.response?.status, error.response?.data);
+    res.status(500).json({ error: 'Proxy failed', details: error.message, status: error.response?.status });
   }
 });
 
