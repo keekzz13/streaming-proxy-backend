@@ -1,7 +1,6 @@
 const express = require('express');
 const cheerio = require('cheerio');
 const axios = require('axios');
-const cloudscraper = require('cloudscraper');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -9,7 +8,7 @@ const PORT = process.env.PORT || 10000;
 const adDomains = [
   'googleadservices.com', 'doubleclick.net', 'adservice.google',
   'popads.net', 'propellerads.com', 'adnxs.com', 'pubmatic.com',
-  'adskeeper.com', 'vliplatform.com', 'adsterra.com'
+  'adskeeper.com', 'vliplatform.com', 'adsterra.com', 'propellerclick.com'
 ];
 
 app.use((req, res, next) => {
@@ -40,10 +39,15 @@ app.get('/proxy', async (req, res) => {
       'Cookie': 'PHPSESSID=27lfeaec1gfnv0b2gqn3vneh0v; SITE_TOTAL_ID=aOJ223HXtoblQvR2_l09VAAAAAE'
     };
 
-    const response = await cloudscraper.get(targetUrl, { headers, timeout: 10000 });
+    const response = await axios.get(targetUrl, {
+      headers,
+      timeout: 10000,
+      maxRedirects: 5,
+      validateStatus: status => status < 500 // Accept non-error statuses
+    });
 
-    if (typeof response === 'string' && response.includes('text/html')) {
-      const $ = cheerio.load(response);
+    if (response.headers['content-type']?.includes('text/html')) {
+      const $ = cheerio.load(response.data);
 
       $('script[src]').each((i, el) => {
         const src = $(el).attr('src');
@@ -53,7 +57,7 @@ app.get('/proxy', async (req, res) => {
         }
       });
 
-      $('div[class*="ad"], div[id*="ad"], iframe[src*="ad"], .advertisement, .popup-ad, .adsbyvli, .ad-container, .vli-ad, .ad-overlay').remove();
+      $('div[class*="ad"], div[id*="ad"], iframe[src*="ad"], .advertisement, .popup-ad, .adsbyvli, .ad-container, .vli-ad, .ad-overlay, .ad-slot').remove();
 
       $('script').each((i, el) => {
         const scriptText = $(el).html();
@@ -76,11 +80,16 @@ app.get('/proxy', async (req, res) => {
       res.send($.html());
     } else {
       res.set('Content-Type', response.headers['content-type'] || 'application/octet-stream');
-      res.send(response);
+      res.send(response.data);
     }
   } catch (error) {
     console.error(`Proxy error for ${targetUrl}:`, error.message, error.response?.status);
-    res.status(500).json({ error: 'Proxy failed', details: error.message, status: error.response?.status });
+    res.status(500).json({
+      error: 'Proxy failed',
+      details: error.message,
+      status: error.response?.status,
+      response: error.response?.data?.substring(0, 200) // Truncate for logs
+    });
   }
 });
 
