@@ -3,11 +3,12 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000; 
 
 const adDomains = [
   'googleadservices.com', 'doubleclick.net', 'adservice.google',
   'popads.net', 'propellerads.com',
+  'adnxs.com', 'pubmatic.com', 
 ];
 
 app.use((req, res, next) => {
@@ -25,8 +26,15 @@ app.get('/proxy', async (req, res) => {
   try {
     const response = await axios.get(targetUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': targetUrl.includes('2embed') ? 'https://www.2embed.cc/' : 'https://vidsrc.me/' 'https://vidsrc.to/',
+        'DNT': '1', 
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
       },
+      timeout: 10000, 
     });
 
     if (response.headers['content-type']?.includes('text/html')) {
@@ -35,6 +43,7 @@ app.get('/proxy', async (req, res) => {
       $('script[src]').each((i, el) => {
         const src = $(el).attr('src');
         if (src && adDomains.some(domain => src.includes(domain))) {
+          console.log(`Blocked ad script: ${src}`);
           $(el).remove();
         }
       });
@@ -44,6 +53,7 @@ app.get('/proxy', async (req, res) => {
       $('script').each((i, el) => {
         const scriptText = $(el).html();
         if (scriptText && (scriptText.includes('ad') || scriptText.includes('popup'))) {
+          console.log(`Blocked inline ad script: ${scriptText.substring(0, 50)}...`);
           $(el).remove();
         }
       });
@@ -64,8 +74,8 @@ app.get('/proxy', async (req, res) => {
       res.send(response.data);
     }
   } catch (error) {
-    console.error('Proxy error:', error.message);
-    res.status(500).json({ error: 'Proxy failed' });
+    console.error(`Proxy error for ${targetUrl}:`, error.message, error.response?.status);
+    res.status(500).json({ error: 'Proxy failed', details: error.message });
   }
 });
 
