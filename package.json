@@ -9,6 +9,7 @@
   "dependencies": {
     "express": "^4.19.2",
     "cheerio": "^1.0.0",
-    "puppeteer": "^23.0.2"
+    "axios": "^1.6.0",
+    "cloudscraper": "^4.6.0"
   }
 }
