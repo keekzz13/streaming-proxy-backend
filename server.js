@@ -1,6 +1,7 @@
 const express = require('express');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const { install, resolveBuildId } = require('@puppeteer/browsers');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -23,10 +24,18 @@ app.get('/proxy', async (req, res) => {
   }
 
   try {
+    const cacheDir = '/opt/render/.cache/puppeteer';
+    const buildId = await resolveBuildId('chrome', 'linux', '131.0.6778.204');
+    const { executablePath } = await install({
+      browser: 'chrome',
+      buildId,
+      cacheDir
+    });
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/opt/render/.cache/puppeteer/chrome/linux-131.0.6778.204/chrome-linux64/chrome'
+      executablePath
     });
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
