@@ -4,13 +4,11 @@
   "description": "Proxy server to strip ads from streaming embeds",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "postinstall": "npx @puppeteer/browsers install chrome@131.0.6778.204"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "cheerio": "^1.0.0",
-    "puppeteer-core": "^23.0.2",
-    "@puppeteer/browsers": "^2.4.0"
+    "puppeteer": "^23.0.2"
   }
 }
